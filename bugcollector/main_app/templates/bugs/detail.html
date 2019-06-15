@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Bug Details</h1>
+
+<div class="card">
+    <div class="card-content">
+        <span class="card-title">{{ bug.name }}</span>
+        <p>Type: {{ bug.type_bug }}</p>
+        <p> Description: {{ bug.description }}</p>
+        {% if bug.age > 0 %}
+            <p>Age: {{ bug.age }}</p>
+        {% else %}
+            <p>Age: Larva</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
