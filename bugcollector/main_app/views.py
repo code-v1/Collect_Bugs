@@ -4,15 +4,16 @@ from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView, DetailView
 import uuid
 import boto3
+
 from .models import Bug , Toy, Photo
 from .forms import FeedingForm
 
-S3_BASE_URL = 'https://s3.us-east-2.amazonaws.com/'
+S3_BASE_URL = 'https://s3-us-east-2.amazonaws.com/'
 BUCKET = 'bugcollecting'
 
 
 def home(request):
-    return HttpResponse('Bug Collecter Homepage')
+    return render(request, 'about.html')
 
 def about(request):
     return render(request, 'about.html')
@@ -49,12 +50,14 @@ def add_photo(request, bug_id):
     s3 = boto3.client('s3')
     key = uuid.uuid4().hex[:6] + photo_file.name[photo_file.name.rfind('.'):]
     try:
+      print('success')
       s3.upload_fileobj(photo_file, BUCKET, key)
       url = f"{S3_BASE_URL}{BUCKET}/{key}"
       photo = Photo(url=url, bug_id=bug_id)
       photo.save()
     except:
       print('An error occurred uploading file to S3')
+      print(f"{S3_BASE_URL}{BUCKET}/{key}")
   return redirect('detail', bug_id=bug_id)
 
 class BugCreate(CreateView):
