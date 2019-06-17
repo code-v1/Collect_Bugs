@@ -4,13 +4,29 @@ from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView, DetailView
 import uuid
 import boto3
-
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Bug , Toy, Photo
 from .forms import FeedingForm
 
 S3_BASE_URL = 'https://s3-us-east-2.amazonaws.com/'
 BUCKET = 'bugcollecting'
 
+def signup(request):
+  error_message = ''
+  if request.method == 'POST':
+    form = UserCreationForm(request.POST)
+    if form.is_valid():
+      user = form.save()
+      login(request, user)
+      return redirect('index')
+    else:
+      error_message = 'Invalid sign up - try again'
+  form = UserCreationForm()
+  context = {'form': form, 'error_message': error_message}
+  return render(request, 'registration/signup.html', context)
 
 def home(request):
     return render(request, 'about.html')
@@ -19,9 +35,10 @@ def about(request):
     return render(request, 'about.html')
 
 def bugs_index(request):
-    bugs = Bug.objects.all()
+    bugs = Bug.objects.filter(user=request.user)
     return render(request, 'bugs/index.html', { 'bugs': bugs})
 
+@login_required
 def bugs_detail(request, bug_id):
     bug = Bug.objects.get(id=bug_id)
     toys_bug_dosent_have = Toy.objects.exclude(id__in = bug.toys.all().values_list('id'))
@@ -31,11 +48,17 @@ def bugs_detail(request, bug_id):
         'toys': toys_bug_dosent_have
         })
 
+@login_required
 def assoc_toy(request, bug_id, toy_id):
     Bug.objects.get(id=bug_id).toys.add(toy_id)
     return redirect('detail', bug_id=bug_id)
 
+@login_required
+def unassoc_toy(request, bug_id, toy_id):
+  Bug.objects.get(id=bug_id).toys.add(toy_id)
+  return redirect('detail', bug_id=bug_id)
 
+@login_required
 def add_feeding(request, bug_id):
     form = FeedingForm(request.POST)
     if form.is_valid():
@@ -44,6 +67,7 @@ def add_feeding(request, bug_id):
         new_feeding.save()
     return redirect('detail', bug_id=bug_id)
 
+@login_required
 def add_photo(request, bug_id):
   photo_file = request.FILES.get('photo-file', None)
   if photo_file:
@@ -63,31 +87,34 @@ def add_photo(request, bug_id):
 class BugCreate(CreateView):
     model = Bug
     fields = '__all__'
-    success_url = '/bugs/'
+   
+    def form_valid(self, form):
+      form.instance.user = self.request.user
+      return super().form_valid(form)
 
-class BugUpdate(UpdateView):
+class BugUpdate(LoginRequiredMixin,UpdateView):
     model = Bug
     fields = ['type_bug', 'description', 'age']
 
-class BugDelete(DeleteView):
+class BugDelete(LoginRequiredMixin,DeleteView):
     model = Bug
     success_url = '/bugs/'
 
-class ToyList(ListView):
+class ToyList(LoginRequiredMixin,ListView):
   model = Toy
 
-class ToyDetail(DetailView):
+class ToyDetail(LoginRequiredMixin,DetailView):
   model = Toy
 
-class ToyCreate(CreateView):
+class ToyCreate(LoginRequiredMixin,CreateView):
   model = Toy
   fields = '__all__'
 
-class ToyUpdate(UpdateView):
+class ToyUpdate(LoginRequiredMixin,UpdateView):
   model = Toy
   fields = ['name', 'color']
 
-class ToyDelete(DeleteView):
+class ToyDelete(LoginRequiredMixin,DeleteView):
   model = Toy
   success_url = '/toys/'
 
